@@ -1,6 +1,7 @@
 #include "ceasy.h"
 
 #include <errno.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -101,69 +102,140 @@ static char *ceasy_render_posts(const DatabaseRows *rows) {
     return body;
 }
 
-static bool ceasy_send_response(int client_fd, const char *status,
-                                const char *body) {
+bool context_send_response(Context *context, const char *status,
+                           const char *content_type, const char *body) {
     char header[256];
-    int header_length = snprintf(
-        header, sizeof(header),
-        "HTTP/1.1 %s\r\nContent-Type: text/plain\r\nContent-Length: %zu\r\n"
-        "Connection: close\r\n\r\n",
-        status, strlen(body));
+    int header_length;
+
+    if (context == NULL || status == NULL || content_type == NULL ||
+        body == NULL || context->client_fd < 0) {
+        return false;
+    }
+
+    header_length = snprintf(header, sizeof(header),
+                             "HTTP/1.1 %s\r\nContent-Type: %s\r\n"
+                             "Content-Length: %zu\r\nConnection: close\r\n"
+                             "\r\n",
+                             status, content_type, strlen(body));
 
     if (header_length < 0 || (size_t)header_length >= sizeof(header)) {
         return false;
     }
 
-    return ceasy_send_all(client_fd, header, (size_t)header_length) &&
-           ceasy_send_all(client_fd, body, strlen(body));
+    if (!ceasy_send_all(context->client_fd, header, (size_t)header_length) ||
+        !ceasy_send_all(context->client_fd, body, strlen(body))) {
+        return false;
+    }
+
+    context->response_sent = true;
+    return true;
 }
 
-static void ceasy_handle_client(int client_fd, Database *database) {
-    char request[4096];
+bool context_send_text(Context *context, const char *status, const char *body) {
+    return context_send_response(context, status, "text/plain", body);
+}
+
+static bool ceasy_parse_request_line(const char *request, char *method,
+                                     size_t method_size, char *path,
+                                     size_t path_size) {
+    char version[16];
+    int parsed;
+
+    parsed = sscanf(request, "%15s %4095s %15s", method, path, version);
+    if (parsed != 3 || strlen(method) + 1 > method_size ||
+        strlen(path) + 1 > path_size || strcmp(version, "HTTP/1.1") != 0) {
+        return false;
+    }
+
+    char *query = strchr(path, '?');
+    if (query != NULL) {
+        *query = '\0';
+    }
+
+    return path[0] == '/';
+}
+
+static void ceasy_handle_client(int client_fd, Database *database,
+                                Router *router) {
+    Context context;
+    char method[16];
+    char path[CEASY_REQUEST_SIZE];
+    RouterResult dispatch_result;
+
+    memset(&context, 0, sizeof(context));
+    context.client_fd = client_fd;
+    context.database = database;
+
+    if (!ceasy_read_request(client_fd, context.request,
+                            sizeof(context.request))) {
+        close(client_fd);
+        return;
+    }
+
+    if (!ceasy_parse_request_line(context.request, method, sizeof(method), path,
+                                  sizeof(path))) {
+        context_send_text(&context, "400 Bad Request", "malformed request\n");
+        close(client_fd);
+        return;
+    }
+
+    dispatch_result = router_dispatch(router, method, path, &context);
+    if (dispatch_result == ROUTER_NOT_FOUND) {
+        context_send_text(&context, "404 Not Found", "not found\n");
+    } else if (dispatch_result == ROUTER_METHOD_NOT_ALLOWED) {
+        context_send_text(&context, "405 Method Not Allowed",
+                          "method not allowed\n");
+    } else if (!context.response_sent) {
+        context_send_text(&context, "204 No Content", "");
+    }
+
+    close(client_fd);
+}
+
+static void ceasy_home(Context *context) {
+    context_send_text(context, "200 OK", "Ceasy\n");
+}
+
+static void ceasy_posts_index(Context *context) {
     DatabaseRows posts;
     char *body;
 
-    if (!ceasy_read_request(client_fd, request, sizeof(request))) {
-        close(client_fd);
-        return;
-    }
-
-    if (strncmp(request, "GET ", 4) != 0) {
-        ceasy_send_response(client_fd, "405 Method Not Allowed", "");
-        close(client_fd);
-        return;
-    }
-
-    if (!database_read(database,
+    if (!database_read(context->database,
                        "SELECT id, title, content, created_at, updated_at "
                        "FROM posts ORDER BY id",
                        &posts)) {
-        ceasy_send_response(client_fd, "500 Internal Server Error",
-                            "could not read posts\n");
-        close(client_fd);
+        context_send_text(context, "500 Internal Server Error",
+                          "could not read posts\n");
         return;
     }
 
     body = ceasy_render_posts(&posts);
     database_rows_free(&posts);
     if (body == NULL) {
-        ceasy_send_response(client_fd, "500 Internal Server Error",
-                            "could not render posts\n");
-        close(client_fd);
+        context_send_text(context, "500 Internal Server Error",
+                          "could not render posts\n");
         return;
     }
 
-    ceasy_send_response(client_fd, "200 OK", body);
+    context_send_text(context, "200 OK", body);
     free(body);
-    close(client_fd);
+}
+
+__attribute__((weak)) void routes(Router *router) {
+    route_get(router, "/", ceasy_home);
+    route_get(router, "/posts", ceasy_posts_index);
 }
 
 void ceasy_run(int argc, char **argv) {
     Database database;
     HttpServer server;
+    Router *router = router_default();
 
     (void)argc;
     (void)argv;
+
+    router_reset(router);
+    routes(router);
 
     if (!database_open(&database, "db/development.sqlite3")) {
         fprintf(stderr, "could not open database: %s\n",
@@ -178,6 +250,8 @@ void ceasy_run(int argc, char **argv) {
         return;
     }
 
+    signal(SIGCHLD, SIG_IGN);
+
     while (true) {
         int client_fd = http_server_accept(&server);
 
@@ -190,7 +264,20 @@ void ceasy_run(int argc, char **argv) {
             break;
         }
 
-        ceasy_handle_client(client_fd, &database);
+        pid_t child_pid = fork();
+
+        if (child_pid < 0) {
+            close(client_fd);
+            continue;
+        }
+
+        if (child_pid == 0) {
+            http_server_close(&server);
+            ceasy_handle_client(client_fd, &database, router);
+            _exit(0);
+        }
+
+        close(client_fd);
     }
 
     http_server_close(&server);
