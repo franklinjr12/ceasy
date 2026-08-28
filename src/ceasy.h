@@ -4,6 +4,6 @@
 #include "database/database.h"
 #include "http/http_server.h"
 
-void ceasy_run(int argc, char** argv);
+void ceasy_run(int argc, char **argv);
 
 #endif

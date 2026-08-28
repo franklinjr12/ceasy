@@ -5,8 +5,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-void test_http_server(void)
-{
+int main(void) {
     HttpServer server;
     struct sockaddr_in address;
     int client_fd;
@@ -20,11 +19,14 @@ void test_http_server(void)
     address.sin_family = AF_INET;
     address.sin_port = htons(http_server_port(&server));
     address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    assert(connect(client_fd, (struct sockaddr *)&address, sizeof(address)) == 0);
+    assert(connect(client_fd, (struct sockaddr *)&address, sizeof(address)) ==
+           0);
     accepted_fd = http_server_accept(&server);
     assert(accepted_fd >= 0);
 
     close(accepted_fd);
     close(client_fd);
     http_server_close(&server);
+
+    return 0;
 }

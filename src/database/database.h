@@ -30,7 +30,8 @@ bool database_write(Database *database, const char *sql);
 bool database_flush(Database *database);
 size_t database_pending_writes(const Database *database);
 
-/* Rows and strings belong to caller until database_rows_free. NULL means SQL NULL. */
+/* Rows and strings belong to caller until database_rows_free. NULL means SQL
+ * NULL. */
 bool database_read(Database *database, const char *sql, DatabaseRows *rows);
 void database_rows_free(DatabaseRows *rows);
 

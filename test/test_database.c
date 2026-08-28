@@ -2,13 +2,13 @@
 
 #include <assert.h>
 
-void test_database(void)
-{
+int main(void) {
     Database database;
     DatabaseRows rows;
 
     assert(database_open(&database, ":memory:"));
-    assert(database_write(&database, "CREATE TABLE users (id INTEGER, name TEXT)"));
+    assert(database_write(&database,
+                          "CREATE TABLE users (id INTEGER, name TEXT)"));
     assert(database_write(&database, "INSERT INTO users VALUES (1, 'Ada')"));
     assert(database_pending_writes(&database) == 2);
     assert(database_read(&database, "SELECT id, name FROM users", &rows));
@@ -21,4 +21,6 @@ void test_database(void)
     assert(rows.rows[0][1][0] == 'A');
     database_rows_free(&rows);
     assert(database_close(&database));
+
+    return 0;
 }
