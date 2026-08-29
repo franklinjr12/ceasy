@@ -1,9 +1,9 @@
 #ifndef CEASY_H
 #define CEASY_H
 
-#include "database/database.h"
-#include "http/http_server.h"
-#include "routing/router.h"
+#include <ceasy/database/database.h>
+#include <ceasy/http/http_server.h>
+#include <ceasy/routing/router.h>
 
 #include <stdbool.h>
 

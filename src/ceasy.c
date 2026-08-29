@@ -1,4 +1,4 @@
-#include "ceasy.h"
+#include "ceasy/ceasy.h"
 
 #include <errno.h>
 #include <signal.h>

@@ -4,6 +4,25 @@ docker build -t ceasy .
 # run
 docker run --rm -it -v "${PWD}:/workspace" -p 3000:3000 -w /workspace ceasy bash
 
+Ceasy builds as a library. Posts sample app uses it through cdev dependency:
+
+```bash
+./bin/cdev build
+cd examples/posts
+../../bin/cdev build
+```
+
+Seed and run Posts:
+
+```bash
+mkdir -p db build
+clang tools/seed_database.c -lsqlite3 -o build/seed_database
+./build/seed_database
+../../bin/cdev run
+```
+
+`GET /posts` returns seeded posts.
+
 Seed development database inside container:
 
 ```bash
