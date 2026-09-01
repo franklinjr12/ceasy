@@ -448,6 +448,7 @@ Avoid:
 * generic abstractions without concrete use cases;
 * clever ownership tricks;
 * hidden global mutable state.
+* NEVER use goto or any jmp instructions.
 
 Macros are acceptable when they provide meaningful framework ergonomics or metadata that C otherwise lacks.
 

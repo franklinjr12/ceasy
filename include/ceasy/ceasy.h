@@ -3,6 +3,7 @@
 
 #include <ceasy/database/database.h>
 #include <ceasy/http/http_server.h>
+#include <ceasy/memory/arena.h>
 #include <ceasy/routing/router.h>
 
 #include <stdbool.h>

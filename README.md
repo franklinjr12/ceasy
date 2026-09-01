@@ -23,6 +23,33 @@ clang tools/seed_database.c -lsqlite3 -o build/seed_database
 
 `GET /posts` returns seeded posts.
 
+Arena memory
+------------
+
+`<ceasy/memory/arena.h>` provides grouped, request-friendly ownership without
+individual frees. Initialize with a preferred block size; allocations grow into
+stable linked blocks and return `NULL` on zero-size requests or allocation
+failure. `arena_reset` reuses normal blocks, `arena_restore` rolls back to a
+mark, and `arena_destroy` releases all blocks. Allocation pointers become
+invalid after a reset/restore that covers them or after destruction. Arena
+instances require external synchronization.
+
+```c
+typedef struct {
+    int id;
+} User;
+
+Arena arena;
+arena_init(&arena, 64 * 1024);
+
+User *user = arena_new_zero(&arena, User);
+ArenaMark mark = arena_mark(&arena);
+void *temporary = arena_alloc(&arena, 4096);
+(void)temporary;
+arena_restore(&arena, mark);
+arena_destroy(&arena);
+```
+
 Seed development database inside container:
 
 ```bash
