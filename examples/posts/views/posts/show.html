@@ -1,0 +1,12 @@
+<h1>{{post.title}}</h1>
+
+<p>{{post.content}}</p>
+
+<a href="/posts/{{post.id}}/edit">Edit</a>
+
+<form method="POST" action="/posts/{{post.id}}">
+    <input type="hidden" name="_method" value="DELETE">
+    <button>Delete</button>
+</form>
+
+<a href="/posts">Back</a>

@@ -8,6 +8,7 @@
 #include <ceasy/http/request.h>
 #include <ceasy/memory/arena.h>
 #include <ceasy/string/string.h>
+#include <ceasy/view/view.h>
 
 #define CEASY_MAX_FORM_PARAMS 64
 #define CEASY_MAX_ROUTE_PARAMS 16
@@ -28,6 +29,8 @@ typedef struct Context {
     Database *database;
     Arena *arena;
     bool response_sent;
+    ViewData view_data;
+    StringView view_error;
 
     FormParam form_params[CEASY_MAX_FORM_PARAMS];
     size_t form_count;

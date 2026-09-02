@@ -1,7 +1,5 @@
 #include "posts_controller.h"
 
-#include <ceasy/rendering/html.h>
-
 #include <stdint.h>
 
 static bool post_id(Context *context, int64_t *id) {
@@ -10,79 +8,26 @@ static bool post_id(Context *context, int64_t *id) {
     return stringv_parse_int64(value, id) && *id > 0;
 }
 
-static bool append_layout_start(String *html, StringView title) {
-    return string_append(html, sv("<!doctype html><html><head><meta "
-                                  "charset=\"utf-8\"><title>")) &&
-           html_escape_append(html, title) &&
-           string_append(html, sv("</title></head><body>"));
-}
-
-static bool append_layout_end(String *html) {
-    return string_append(html, sv("</body></html>"));
-}
-
-static bool send_rendered(Context *context, String *html) {
-    return context_send_html(context, sv("200 OK"), string_as_view(html));
-}
-
 static void post_error(Context *context, StringView status, StringView body) {
     context_send_text(context, status, body);
 }
 
 void posts_index(Context *context) {
-    String html = string_new_in(context->arena);
     PostArray posts = {0};
-    bool success = append_layout_start(&html, sv("Posts")) &&
-                   string_append(&html, sv("<h1>Posts</h1><a href=\"/posts/"
-                                           "new\">New post</a><ul>"));
-
-    if (!success || !post_all(context, &posts)) {
-        string_destroy(&html);
+    if (!post_all(context, &posts) ||
+        !view_set(context, sv("page_title"), view_string(sv("Posts"))) ||
+        !view_set(context, sv("posts"), post_array_view(posts))) {
         post_error(context, sv("500 Internal Server Error"),
                    sv("database error\n"));
         return;
     }
-    for (size_t index = 0; index < posts.length; index++) {
-        Post *post = &posts.items[index];
-        long long id = (long long)post->id;
-
-        success =
-            string_append_format(
-                &html, "<li><article><h2><a href=\"/posts/%lld\">", id) &&
-            html_escape_append(&html, string_as_view(&post->title)) &&
-            string_append(&html, sv("</a></h2><p>")) &&
-            html_escape_append(&html, string_as_view(&post->content)) &&
-            string_append(&html, sv("</p><a href=\"/posts/")) &&
-            string_append_format(&html, "%lld/edit\">Edit</a> ", id) &&
-            string_append_format(&html,
-                                 "<form method=\"POST\" action=\"/posts/%lld\" "
-                                 "style=\"display:inline\"><input "
-                                 "type=\"hidden\" name=\"_method\" "
-                                 "value=\"DELETE\"><button>Delete</button></"
-                                 "form></article></li>",
-                                 id);
-        if (!success) {
-            break;
-        }
-    }
-    success = success && string_append(&html, sv("</ul>")) &&
-              append_layout_end(&html);
-    if (!success) {
-        string_destroy(&html);
-        post_error(context, sv("500 Internal Server Error"),
-                   sv("could not render posts\n"));
-        return;
-    }
-    send_rendered(context, &html);
-    string_destroy(&html);
+    render(context, sv("posts/index"));
 }
 
 void posts_show(Context *context) {
     int64_t id;
     Post *post = NULL;
     ModelResult result;
-    String html;
-
     if (!post_id(context, &id)) {
         post_error(context, sv("400 Bad Request"), sv("invalid post id\n"));
         return;
@@ -97,66 +42,27 @@ void posts_show(Context *context) {
                    sv("database error\n"));
         return;
     }
-    html = string_new_in(context->arena);
-    if (!append_layout_start(&html, string_as_view(&post->title)) ||
-        !string_append(&html, sv("<h1>")) ||
-        !html_escape_append(&html, string_as_view(&post->title)) ||
-        !string_append(&html, sv("</h1><p>")) ||
-        !html_escape_append(&html, string_as_view(&post->content)) ||
-        !string_append_format(
-            &html,
-            "</p><a href=\"/posts/%lld/edit\">Edit</a> <form method=\"POST\" "
-            "action=\"/posts/%lld\"><input type=\"hidden\" name=\"_method\" "
-            "value=\"DELETE\"><button>Delete</button></form><p><a "
-            "href=\"/posts\">Back</a></p>",
-            (long long)id, (long long)id) ||
-        !append_layout_end(&html)) {
-        string_destroy(&html);
+    if (!view_set(context, sv("page_title"),
+                  view_string(string_as_view(&post->title))) ||
+        !view_set(context, sv("post"), post_view(post))) {
         post_error(context, sv("500 Internal Server Error"),
-                   sv("could not render post\n"));
+                   sv("could not prepare post\n"));
         return;
     }
-    send_rendered(context, &html);
-    string_destroy(&html);
-}
-
-static bool append_post_form(String *html, StringView heading,
-                             StringView action, StringView title,
-                             StringView content, StringView method) {
-    return append_layout_start(html, heading) &&
-           string_append(html, sv("<h1>")) &&
-           html_escape_append(html, heading) &&
-           string_append(html, sv("</h1><form method=\"POST\" action=\"")) &&
-           html_escape_append(html, action) &&
-           string_append(
-               html,
-               sv("\"><input type=\"hidden\" name=\"_method\" value=\"")) &&
-           html_escape_append(html, method) &&
-           string_append(
-               html,
-               sv("\"><label>Title</label><input name=\"title\" value=\"")) &&
-           html_escape_append(html, title) &&
-           string_append(
-               html,
-               sv("\"><label>Content</label><textarea name=\"content\">")) &&
-           html_escape_append(html, content) &&
-           string_append(html, sv("</textarea><button>Save</button></form>")) &&
-           string_append(html, sv("<p><a href=\"/posts\">Back</a></p>")) &&
-           append_layout_end(html);
+    render(context, sv("posts/show"));
 }
 
 void posts_new(Context *context) {
-    String html = string_new_in(context->arena);
-
-    if (!append_post_form(&html, sv("New post"), sv("/posts"), (StringView){0},
-                          (StringView){0}, sv(""))) {
-        string_destroy(&html);
+    if (!view_set(context, sv("page_title"), view_string(sv("New post"))) ||
+        !view_set(context, sv("form_action"), view_string(sv("/posts"))) ||
+        !view_set(context, sv("editing"), view_bool(false)) ||
+        !view_set(context, sv("title"), view_string((StringView){0})) ||
+        !view_set(context, sv("content"), view_string((StringView){0}))) {
         post_error(context, sv("500 Internal Server Error"),
                    sv("could not render form\n"));
         return;
     }
-    send_rendered(context, &html);
-    string_destroy(&html);
+    render(context, sv("posts/new"));
 }
 
 void posts_create(Context *context) {
@@ -189,7 +95,6 @@ void posts_edit(Context *context) {
     Post *post = NULL;
     ModelResult result;
     String action;
-    String html;
 
     if (!post_id(context, &id)) {
         post_error(context, sv("400 Bad Request"), sv("invalid post id\n"));
@@ -206,18 +111,19 @@ void posts_edit(Context *context) {
         return;
     }
     action = string_format_in(context->arena, "/posts/%lld", (long long)id);
-    html = string_new_in(context->arena);
     if (action.data == NULL ||
-        !append_post_form(&html, sv("Edit post"), string_as_view(&action),
-                          string_as_view(&post->title),
-                          string_as_view(&post->content), sv("PATCH"))) {
-        string_destroy(&html);
+        !view_set(context, sv("page_title"), view_string(sv("Edit post"))) ||
+        !view_set(context, sv("post"), post_view(post)) ||
+        !view_set(context, sv("form_action"), view_string(string_as_view(&action))) ||
+        !view_set(context, sv("editing"), view_bool(true)) ||
+        !view_set(context, sv("title"), view_string(string_as_view(&post->title))) ||
+        !view_set(context, sv("content"),
+                  view_string(string_as_view(&post->content)))) {
         post_error(context, sv("500 Internal Server Error"),
                    sv("could not render form\n"));
         return;
     }
-    send_rendered(context, &html);
-    string_destroy(&html);
+    render(context, sv("posts/edit"));
 }
 
 void posts_update(Context *context) {

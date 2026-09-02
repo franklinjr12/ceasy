@@ -1,5 +1,7 @@
 #include "ceasy/model/model.h"
 
+#include "ceasy/context.h"
+
 #include <limits.h>
 #include <string.h>
 

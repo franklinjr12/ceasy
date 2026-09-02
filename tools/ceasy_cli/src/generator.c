@@ -197,18 +197,32 @@ static bool generated_model_header(String *out, const Naming *n,
             return false;
         }
     }
-    return generated_append(
-        out,
-        "    String created_at;\n    String updated_at;\n} %s;\n\ntypedef "
-        "struct {\n    %s *items;\n    size_t length;\n} "
-        "%sArray;\n\nModelResult %s_find(Context *context, int64_t id, %s "
-        "**post);\nbool %s_all(Context *context, %sArray *posts);\nbool "
-        "%s_insert(Context *context, %s *post);\nModelResult %s_update(Context "
-        "*context, %s *post);\nModelResult %s_destroy(Context *context, %s "
-        "*post);\n\n#endif\n",
-        n->type_name, n->type_name, n->type_name, n->singular, n->type_name,
-        n->singular, n->type_name, n->singular, n->type_name, n->singular,
-        n->type_name, n->singular, n->type_name);
+    if (!generated_append(
+            out,
+            "    String created_at;\n    String updated_at;\n} %s;\n\ntypedef "
+            "struct {\n    %s *items;\n    size_t length;\n} "
+            "%sArray;\n\nModelResult %s_find(Context *context, int64_t id, %s "
+            "**post);\nbool %s_all(Context *context, %sArray *posts);\nbool "
+            "%s_insert(Context *context, %s *post);\nModelResult "
+            "%s_update(Context "
+            "*context, %s *post);\nModelResult %s_destroy(Context *context, %s "
+            "*post);\n\n",
+            n->type_name, n->type_name, n->type_name, n->singular, n->type_name,
+            n->singular, n->type_name, n->singular, n->type_name, n->singular,
+            n->type_name, n->singular, n->type_name)) {
+        return false;
+    }
+    if (out->data == NULL ||
+        !generated_append(
+            out,
+            "const ModelDefinition *%s_model_definition(void);\nViewValue "
+            "%s_view(const %s *%s);\nViewValue %s_array_view(%sArray %s);\n\n"
+            "#endif\n",
+            n->singular, n->singular, n->type_name, n->singular, n->singular,
+            n->type_name, n->plural)) {
+        return false;
+    }
+    return true;
 }
 
 static bool generated_columns(String *out, const FieldSpec *fields,
@@ -333,6 +347,19 @@ static bool generated_model_source(String *out, const Naming *n,
             out,
             "    .delete_sql = sv(\"DELETE FROM %s WHERE id = ?\"),\n};\n\n",
             n->plural)) {
+        return false;
+    }
+    if (!generated_append(
+            out,
+            "const ModelDefinition *%s_model_definition(void) { return "
+            "&%s_definition; }\nViewValue %s_view(const %s *%s) { return "
+            "view_model(%s, &%s_definition); }\nViewValue "
+            "%s_array_view(%sArray "
+            "%s) { return view_collection(%s.items, %s.length, "
+            "&%s_definition); }\n\n",
+            n->singular, n->singular, n->singular, n->type_name, n->singular,
+            n->singular, n->singular, n->singular, n->type_name, n->plural,
+            n->plural, n->plural, n->singular)) {
         return false;
     }
     if (!generated_append(out,

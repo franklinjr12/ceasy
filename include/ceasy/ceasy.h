@@ -10,6 +10,7 @@
 #include <ceasy/rendering/html.h>
 #include <ceasy/routing/router.h>
 #include <ceasy/string/string.h>
+#include <ceasy/view/view.h>
 
 /* Application route hook. Define this in application code to replace defaults.
  */

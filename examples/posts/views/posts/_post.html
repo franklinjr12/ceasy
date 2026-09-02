@@ -1,0 +1,18 @@
+<article>
+    <h2>
+        <a href="/posts/{{id}}">
+            {{title}}
+        </a>
+    </h2>
+
+    <p>{{content}}</p>
+
+    <a href="/posts/{{id}}/edit">
+        Edit
+    </a>
+
+    <form method="POST" action="/posts/{{id}}">
+        <input type="hidden" name="_method" value="DELETE">
+        <button>Delete</button>
+    </form>
+</article>

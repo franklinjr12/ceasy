@@ -21,5 +21,8 @@ bool post_all(Context *context, PostArray *posts);
 bool post_insert(Context *context, Post *post);
 ModelResult post_update(Context *context, Post *post);
 ModelResult post_destroy(Context *context, Post *post);
+const ModelDefinition *post_model_definition(void);
+ViewValue post_view(const Post *post);
+ViewValue post_array_view(PostArray posts);
 
 #endif

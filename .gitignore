@@ -1,2 +1,3 @@
 build/
 db/*.sqlite3
+**/src/generated/ceasy_views.c

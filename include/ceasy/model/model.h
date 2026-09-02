@@ -5,8 +5,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <ceasy/context.h>
 #include <ceasy/string/string.h>
+
+typedef struct Context Context;
 
 typedef enum {
     MODEL_FIELD_STRING,
@@ -14,7 +15,7 @@ typedef enum {
     MODEL_FIELD_BOOL
 } ModelFieldType;
 
-typedef struct {
+typedef struct ModelField {
     StringView name;
     ModelFieldType type;
     size_t offset;
@@ -23,7 +24,7 @@ typedef struct {
     bool updatable;
 } ModelField;
 
-typedef struct {
+typedef struct ModelDefinition {
     StringView name;
     StringView table_name;
     size_t size;

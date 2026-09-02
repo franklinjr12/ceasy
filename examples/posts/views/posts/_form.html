@@ -1,0 +1,13 @@
+<form method="POST" action="{{form_action}}">
+    {{#editing}}
+        <input type="hidden" name="_method" value="PATCH">
+    {{/editing}}
+
+    <label>Title</label>
+    <input name="title" value="{{title}}">
+
+    <label>Content</label>
+    <textarea name="content">{{content}}</textarea>
+
+    <button>Save</button>
+</form>

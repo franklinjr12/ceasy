@@ -10,6 +10,18 @@
 
 static bool exists(const char *path) { return access(path, F_OK) == 0; }
 
+static bool file_contains(const char *path, const char *needle) {
+    FILE *file = fopen(path, "rb");
+    char buffer[8192] = {0};
+    size_t length;
+
+    assert(file != NULL);
+    length = fread(buffer, 1, sizeof(buffer) - 1, file);
+    assert(fclose(file) == 0);
+    buffer[length] = '\0';
+    return strstr(buffer, needle) != NULL;
+}
+
 static void remove_directory_files(const char *directory) {
     DIR *entries = opendir(directory);
     struct dirent *entry;
@@ -33,6 +45,7 @@ int main(void) {
     char root_template[] = "/tmp/ceasy-generator-test-XXXXXX";
     char *root = mkdtemp(root_template);
     char path[PATH_MAX];
+    char command[PATH_MAX * 2];
     char *fields[] = {"published:bool", "views:integer"};
     CeasyProject project = {0};
 
@@ -44,6 +57,13 @@ int main(void) {
     assert(exists(path));
     assert(snprintf(path, sizeof(path), "%s/src/models/user.c", root) > 0);
     assert(exists(path));
+    assert(file_contains(path, "user_model_definition"));
+    assert(file_contains(path, "user_array_view"));
+    assert(snprintf(command, sizeof(command),
+                    "clang -std=c17 -I/workspace/include -I%s/src/models "
+                    "-c %s/src/models/user.c -o %s/user.o",
+                    root, root, root) > 0);
+    assert(system(command) == 0);
     assert(snprintf(path, sizeof(path), "%s/test/models/user_test.c", root) >
            0);
     assert(exists(path));
@@ -60,6 +80,8 @@ int main(void) {
     assert(rmdir(path) == 0);
     assert(snprintf(path, sizeof(path), "%s/src", root) > 0);
     assert(rmdir(path) == 0);
+    assert(snprintf(path, sizeof(path), "%s/user.o", root) > 0);
+    assert(unlink(path) == 0);
     assert(snprintf(path, sizeof(path), "%s/test", root) > 0);
     assert(rmdir(path) == 0);
     assert(rmdir(root) == 0);

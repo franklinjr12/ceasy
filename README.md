@@ -38,6 +38,35 @@ clang tools/seed_database.c -lsqlite3 -o build/seed_database
 
 `GET /posts` returns seeded posts.
 
+Views
+-----
+
+Controllers can provide typed values and render a logical view path:
+
+```c
+view_set(context, sv("page_title"), view_string(sv("Posts")));
+view_set(context, sv("posts"), post_array_view(posts));
+render(context, sv("posts/index"));
+```
+
+Templates live under `views/` and support escaped variables, model fields,
+collection/boolean sections, inverse sections, partials, and the default
+`views/layouts/application.html` layout with `{{yield}}`. Template variables
+are HTML-escaped by default. Filesystem templates are read on each render in
+development, so browser refreshes show changes without a C rebuild.
+
+For a single executable without the source templates, compile the views before
+building:
+
+```bash
+bin/ceasy views:compile
+bin/cdev build
+```
+
+This writes disposable parsed instructions to `src/generated/ceasy_views.c`.
+At runtime filesystem templates override embedded templates when present, and
+embedded templates are used as the fallback.
+
 Arena memory
 ------------
 

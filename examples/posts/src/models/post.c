@@ -71,3 +71,10 @@ ModelResult post_update(Context *context, Post *post) {
 ModelResult post_destroy(Context *context, Post *post) {
     return model_destroy(context, &post_definition, post);
 }
+const ModelDefinition *post_model_definition(void) { return &post_definition; }
+ViewValue post_view(const Post *post) {
+    return view_model(post, &post_definition);
+}
+ViewValue post_array_view(PostArray posts) {
+    return view_collection(posts.items, posts.length, &post_definition);
+}
