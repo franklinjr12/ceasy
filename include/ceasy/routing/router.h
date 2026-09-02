@@ -4,17 +4,11 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <ceasy/http/request.h>
+
 typedef struct Context Context;
 
 typedef void (*RouteHandler)(Context *context);
-
-typedef enum {
-    HTTP_METHOD_UNKNOWN = 0,
-    HTTP_METHOD_GET,
-    HTTP_METHOD_POST,
-    HTTP_METHOD_PUT,
-    HTTP_METHOD_DELETE
-} HttpMethod;
 
 typedef struct {
     /* Path is borrowed; route paths should remain alive for router lifetime. */
@@ -54,7 +48,6 @@ bool router_default_route_post(const char *path, RouteHandler handler);
 bool router_default_route_patch(const char *path, RouteHandler handler);
 bool router_default_route_delete(const char *path, RouteHandler handler);
 
-HttpMethod http_method_parse(const char *method);
 bool router_path_exists(const Router *router, const char *path);
 RouterResult router_dispatch(Router *router, const char *method,
                              const char *path, Context *context);

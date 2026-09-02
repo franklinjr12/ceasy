@@ -4,7 +4,23 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <stdint.h>
+
+#include <ceasy/string/string.h>
+
 typedef struct DatabaseWrite DatabaseWrite;
+typedef struct Database Database;
+
+typedef struct {
+    Database *database;
+    void *statement;
+} DatabaseStatement;
+
+typedef enum {
+    DATABASE_STEP_ERROR = -1,
+    DATABASE_STEP_DONE = 0,
+    DATABASE_STEP_ROW = 1
+} DatabaseStepResult;
 
 typedef struct {
     int column_count;
@@ -13,13 +29,13 @@ typedef struct {
     int row_count;
 } DatabaseRows;
 
-typedef struct {
+struct Database {
     void *connection;
     DatabaseWrite *writes;
     size_t write_count;
     size_t write_capacity;
     char error[256];
-} Database;
+};
 
 bool database_open(Database *database, const char *path);
 /* Flushes queued writes before closing. */
@@ -36,5 +52,18 @@ bool database_read(Database *database, const char *sql, DatabaseRows *rows);
 void database_rows_free(DatabaseRows *rows);
 
 const char *database_error(const Database *database);
+
+bool database_prepare(Database *database, DatabaseStatement *statement,
+                      StringView sql);
+bool database_bind_text(DatabaseStatement *statement, int index,
+                        StringView value);
+bool database_bind_int64(DatabaseStatement *statement, int index,
+                         int64_t value);
+bool database_execute(DatabaseStatement *statement);
+DatabaseStepResult database_step(DatabaseStatement *statement);
+int64_t database_column_int64(DatabaseStatement *statement, int column);
+StringView database_column_text(DatabaseStatement *statement, int column);
+/* Column text borrows SQLite statement storage until next step/finalize. */
+void database_statement_destroy(DatabaseStatement *statement);
 
 #endif

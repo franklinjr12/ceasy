@@ -2,17 +2,23 @@
 
 #include <assert.h>
 #include <string.h>
-
 static int handler_calls;
 
 static void posts_show(Context *context) {
     assert(context != NULL);
-    assert(strcmp(context->request, "GET /posts/42 HTTP/1.1\r\n\r\n") == 0);
+    assert(stringv_equal(context->request.path, sv("/posts/42")));
+    assert(stringv_equal(context_param(context, sv("id")), sv("42")));
     handler_calls++;
 }
 
 static void posts_new(Context *context) {
     assert(context != NULL);
+    handler_calls++;
+}
+
+static void nested_show(Context *context) {
+    assert(stringv_equal(context_param(context, sv("user_id")), sv("7")));
+    assert(stringv_equal(context_param(context, sv("id")), sv("42")));
     handler_calls++;
 }
 
@@ -27,14 +33,17 @@ int main(void) {
     assert(route_post(&router, "/posts", posts_new));
     assert(route_patch(&router, "/posts/:id", posts_new));
     assert(route_delete(&router, "/posts/:id", posts_new));
+    assert(route_get(&router, "/users/:user_id/posts/:id", nested_show));
 
-    strcpy(context.request, "GET /posts/42 HTTP/1.1\r\n\r\n");
     assert(router_dispatch(&router, "GET", "/posts/42", &context) ==
            ROUTER_DISPATCHED);
     assert(handler_calls == 1);
     assert(router_dispatch(&router, "GET", "/posts/new", &context) ==
            ROUTER_DISPATCHED);
     assert(handler_calls == 2);
+    assert(router_dispatch(&router, "GET", "/users/7/posts/42", &context) ==
+           ROUTER_DISPATCHED);
+    assert(handler_calls == 3);
     assert(router_dispatch(&router, "PUT", "/posts", &context) ==
            ROUTER_METHOD_NOT_ALLOWED);
     assert(router_dispatch(&router, "GET", "/missing", &context) ==

@@ -91,7 +91,7 @@ Optional database path:
 Routes
 ------
 
-Define `routes` in application code. The weak default serves `/` and `/posts`.
+Define `routes` in application code. The weak default serves `/`.
 
 ```c
 void routes(Router *router)
@@ -104,4 +104,5 @@ void routes(Router *router)
 
 Route paths support static segments and `:name` parameter segments. Each
 request is handled in a child process and delivered through `Context`, whose
-raw HTTP request is available in `context->request`.
+structured request is available in `context->request`. `context_form()` parses
+URL-encoded forms; `context_param()` reads route parameters.

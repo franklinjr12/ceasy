@@ -2,6 +2,7 @@
 
 #include <sqlite3.h>
 
+#include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -305,4 +306,131 @@ bool database_read(Database *database, const char *sql, DatabaseRows *rows) {
 
 const char *database_error(const Database *database) {
     return database == NULL ? "invalid database" : database->error;
+}
+
+static sqlite3_stmt *database_statement_handle(DatabaseStatement *statement) {
+    return statement == NULL ? NULL : (sqlite3_stmt *)statement->statement;
+}
+
+bool database_prepare(Database *database, DatabaseStatement *statement,
+                      StringView sql) {
+    sqlite3_stmt *handle = NULL;
+    sqlite3 *connection;
+    int result;
+
+    if (database == NULL || statement == NULL || sql.data == NULL ||
+        sql.length > (size_t)INT_MAX) {
+        return false;
+    }
+    memset(statement, 0, sizeof(*statement));
+    connection = database_connection(database);
+    if (connection == NULL || !database_flush(database)) {
+        return false;
+    }
+    result = sqlite3_prepare_v2(connection, sql.data, (int)sql.length, &handle,
+                                NULL);
+    if (result != SQLITE_OK) {
+        database_set_error(database, "%s", sqlite3_errmsg(connection));
+        return false;
+    }
+    statement->database = database;
+    statement->statement = handle;
+    return true;
+}
+
+bool database_bind_text(DatabaseStatement *statement, int index,
+                        StringView value) {
+    sqlite3_stmt *handle = database_statement_handle(statement);
+    int result;
+
+    if (handle == NULL || (value.data == NULL && value.length > 0) ||
+        value.length > (size_t)INT_MAX) {
+        return false;
+    }
+    result =
+        sqlite3_bind_text(handle, index, value.data != NULL ? value.data : "",
+                          (int)value.length, SQLITE_TRANSIENT);
+    if (result != SQLITE_OK && statement->database != NULL) {
+        database_set_error(
+            statement->database, "%s",
+            sqlite3_errmsg(database_connection(statement->database)));
+    }
+    return result == SQLITE_OK;
+}
+
+bool database_bind_int64(DatabaseStatement *statement, int index,
+                         int64_t value) {
+    sqlite3_stmt *handle = database_statement_handle(statement);
+    int result;
+
+    if (handle == NULL) {
+        return false;
+    }
+    result = sqlite3_bind_int64(handle, index, value);
+    if (result != SQLITE_OK && statement->database != NULL) {
+        database_set_error(
+            statement->database, "%s",
+            sqlite3_errmsg(database_connection(statement->database)));
+    }
+    return result == SQLITE_OK;
+}
+
+bool database_execute(DatabaseStatement *statement) {
+    DatabaseStepResult result = database_step(statement);
+
+    return result == DATABASE_STEP_DONE;
+}
+
+DatabaseStepResult database_step(DatabaseStatement *statement) {
+    sqlite3_stmt *handle = database_statement_handle(statement);
+    int result;
+
+    if (handle == NULL) {
+        return DATABASE_STEP_ERROR;
+    }
+    result = sqlite3_step(handle);
+    if (result == SQLITE_ROW) {
+        return DATABASE_STEP_ROW;
+    }
+    if (result == SQLITE_DONE) {
+        return DATABASE_STEP_DONE;
+    }
+    if (statement->database != NULL) {
+        database_set_error(
+            statement->database, "%s",
+            sqlite3_errmsg(database_connection(statement->database)));
+    }
+    return DATABASE_STEP_ERROR;
+}
+
+int64_t database_column_int64(DatabaseStatement *statement, int column) {
+    sqlite3_stmt *handle = database_statement_handle(statement);
+
+    return handle == NULL ? 0 : sqlite3_column_int64(handle, column);
+}
+
+StringView database_column_text(DatabaseStatement *statement, int column) {
+    sqlite3_stmt *handle = database_statement_handle(statement);
+    const unsigned char *value;
+
+    if (handle == NULL) {
+        return (StringView){0};
+    }
+    value = sqlite3_column_text(handle, column);
+    if (value == NULL) {
+        return (StringView){0};
+    }
+    return (StringView){.data = (const char *)value,
+                        .length = (size_t)sqlite3_column_bytes(handle, column)};
+}
+
+void database_statement_destroy(DatabaseStatement *statement) {
+    if (statement == NULL) {
+        return;
+    }
+    if (statement->statement != NULL) {
+        sqlite3_finalize(database_statement_handle(statement));
+    }
+    statement->statement = NULL;
+    statement->database = NULL;
 }
