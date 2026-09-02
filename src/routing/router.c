@@ -1,4 +1,5 @@
 #include "ceasy/routing/router.h"
+#include "ceasy/string/string.h"
 
 #include <string.h>
 
@@ -177,16 +178,16 @@ HttpMethod http_method_parse(const char *method) {
     if (method == NULL) {
         return HTTP_METHOD_UNKNOWN;
     }
-    if (strcmp(method, "GET") == 0) {
+    if (stringv_equal(stringv_from_cstr(method), sv("GET"))) {
         return HTTP_METHOD_GET;
     }
-    if (strcmp(method, "POST") == 0) {
+    if (stringv_equal(stringv_from_cstr(method), sv("POST"))) {
         return HTTP_METHOD_POST;
     }
-    if (strcmp(method, "PATCH") == 0) {
+    if (stringv_equal(stringv_from_cstr(method), sv("PATCH"))) {
         return HTTP_METHOD_PUT;
     }
-    if (strcmp(method, "DELETE") == 0) {
+    if (stringv_equal(stringv_from_cstr(method), sv("DELETE"))) {
         return HTTP_METHOD_DELETE;
     }
     return HTTP_METHOD_UNKNOWN;

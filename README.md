@@ -50,6 +50,31 @@ arena_restore(&arena, mark);
 arena_destroy(&arena);
 ```
 
+Strings
+-------
+
+`StringView` is a non-owning, length-aware byte slice. It may not be
+null-terminated and never frees its data. Use `sv("literal")` for literals;
+use `stringv_from_cstr` for runtime C strings. `String` owns mutable,
+null-terminated storage through its selected allocator.
+
+```c
+Arena arena;
+arena_init(&arena, 4096);
+
+String html = string_new_in(&arena);
+string_append(&html, sv("<h1>"));
+string_append(&html, sv("Ceasy"));
+string_append(&html, sv("</h1>"));
+
+arena_destroy(&arena);
+```
+
+StringView parsing is byte-oriented and does not silently trim whitespace.
+`stringv_equal_ignore_case`, `string_upper`, and `string_lower` use ASCII
+semantics. Arena-backed String memory is reclaimed by `arena_destroy`; heap
+Strings release storage with `string_destroy`.
+
 Seed development database inside container:
 
 ```bash

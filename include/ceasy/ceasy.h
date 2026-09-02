@@ -5,6 +5,7 @@
 #include <ceasy/http/http_server.h>
 #include <ceasy/memory/arena.h>
 #include <ceasy/routing/router.h>
+#include <ceasy/string/string.h>
 
 #include <stdbool.h>
 
