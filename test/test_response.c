@@ -16,6 +16,7 @@ int main(void) {
     int sockets[2];
     Context context = {0};
     char response[512];
+    const unsigned char binary[] = {0x00, 0xff, 0x00, 0x7f};
 
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) == 0);
     context.client_fd = sockets[0];
@@ -34,6 +35,20 @@ int main(void) {
     assert(strstr(response, "303 See Other") != NULL);
     assert(strstr(response, "Location: /posts") != NULL);
     assert(strstr(response, "Content-Length: 0") != NULL);
+    close(sockets[0]);
+    close(sockets[1]);
+
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) == 0);
+    context = (Context){.client_fd = sockets[0]};
+    assert(context_send_bytes(&context, sv("200 OK"), sv("image/png"), binary,
+                              sizeof(binary)));
+    ssize_t response_length = recv(sockets[1], response, sizeof(response), 0);
+    assert(response_length > 0);
+    char *body = strstr(response, "\r\n\r\n");
+    assert(body != NULL);
+    body += 4;
+    assert((size_t)(response + response_length - body) == sizeof(binary));
+    assert(memcmp(body, binary, sizeof(binary)) == 0);
     close(sockets[0]);
     close(sockets[1]);
     return 0;

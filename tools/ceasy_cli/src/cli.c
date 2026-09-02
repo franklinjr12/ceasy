@@ -1,5 +1,6 @@
 #include "cli.h"
 
+#include "asset_compiler.h"
 #include "generator.h"
 #include "migration.h"
 #include "project.h"
@@ -11,7 +12,7 @@
 static void cli_help(void) {
     puts("Ceasy\n\nUsage:\n  ceasy generate model <Model> [field:type ...]\n  "
          "ceasy generate migration <name>\n  ceasy db:migrate\n  "
-         "ceasy views:compile");
+         "ceasy views:compile\n  ceasy assets:compile");
 }
 
 int cli_run(int argc, char **argv) {
@@ -31,6 +32,9 @@ int cli_run(int argc, char **argv) {
     }
     if (strcmp(argv[1], "views:compile") == 0 && argc == 2) {
         return view_compiler_run(&project) ? 0 : 1;
+    }
+    if (strcmp(argv[1], "assets:compile") == 0 && argc == 2) {
+        return asset_compiler_run(&project) ? 0 : 1;
     }
     if (strcmp(argv[1], "generate") == 0 && argc >= 4 &&
         strcmp(argv[2], "model") == 0) {

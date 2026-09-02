@@ -1,11 +1,14 @@
-<h1>Posts</h1>
+<div class="page-heading">
+    <h1>Posts</h1>
+    <a class="button" href="/posts/new">New post</a>
+</div>
 
-<a href="/posts/new">New post</a>
-
-{{#posts}}
-    {{> posts/post}}
-{{/posts}}
+<section class="post-list">
+    {{#posts}}
+        {{> posts/post}}
+    {{/posts}}
+</section>
 
 {{^posts}}
-    <p>No posts yet.</p>
+    <p class="muted">No posts yet.</p>
 {{/posts}}

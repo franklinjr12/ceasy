@@ -1,12 +1,16 @@
-<h1>{{post.title}}</h1>
+<article class="post-card">
+    <h1 class="post-title">{{post.title}}</h1>
 
-<p>{{post.content}}</p>
+    <p class="post-content">{{post.content}}</p>
 
-<a href="/posts/{{post.id}}/edit">Edit</a>
+    <div class="post-actions">
+        <a class="button" href="/posts/{{post.id}}/edit">Edit</a>
 
-<form method="POST" action="/posts/{{post.id}}">
-    <input type="hidden" name="_method" value="DELETE">
-    <button>Delete</button>
-</form>
+        <form class="delete-form inline-form" method="POST" action="/posts/{{post.id}}">
+            <input type="hidden" name="_method" value="DELETE">
+            <button class="button button-danger" type="submit">Delete</button>
+        </form>
+    </div>
+</article>
 
-<a href="/posts">Back</a>
+<p><a href="/posts">Back</a></p>

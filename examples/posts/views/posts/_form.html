@@ -1,13 +1,13 @@
-<form method="POST" action="{{form_action}}">
+<form class="post-form" method="POST" action="{{form_action}}">
     {{#editing}}
         <input type="hidden" name="_method" value="PATCH">
     {{/editing}}
 
-    <label>Title</label>
-    <input name="title" value="{{title}}">
+    <label for="post-title">Title</label>
+    <input id="post-title" name="title" value="{{title}}">
 
-    <label>Content</label>
-    <textarea name="content">{{content}}</textarea>
+    <label for="post-content">Content</label>
+    <textarea id="post-content" name="content">{{content}}</textarea>
 
-    <button>Save</button>
+    <button class="button" type="submit">Save</button>
 </form>

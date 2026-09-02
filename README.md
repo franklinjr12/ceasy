@@ -150,3 +150,29 @@ Route paths support static segments and `:name` parameter segments. Each
 request is handled in a child process and delivered through `Context`, whose
 structured request is available in `context->request`. `context_form()` parses
 URL-encoded forms; `context_param()` reads route parameters.
+
+Static assets
+-------------
+
+Files under `public/` are served as normal browser assets without Ceasy-specific
+HTML helpers. `public/styles/application.css` is available at
+`/styles/application.css`, and `public/scripts/application.js` is available at
+`/scripts/application.js`:
+
+```html
+<link rel="stylesheet" href="/styles/application.css">
+<script src="/scripts/application.js" defer></script>
+```
+
+During development, `public/**` is read directly from disk on each request, so
+CSS and JavaScript changes appear after a browser refresh. For a single
+executable, compile static bytes alongside views:
+
+```bash
+bin/ceasy assets:compile
+bin/ceasy views:compile
+bin/cdev build
+```
+
+Ceasy does not require Node or a JavaScript build pipeline. External frontend
+tools may write their final artifacts into `public/`.

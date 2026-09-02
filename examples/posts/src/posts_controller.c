@@ -114,9 +114,11 @@ void posts_edit(Context *context) {
     if (action.data == NULL ||
         !view_set(context, sv("page_title"), view_string(sv("Edit post"))) ||
         !view_set(context, sv("post"), post_view(post)) ||
-        !view_set(context, sv("form_action"), view_string(string_as_view(&action))) ||
+        !view_set(context, sv("form_action"),
+                  view_string(string_as_view(&action))) ||
         !view_set(context, sv("editing"), view_bool(true)) ||
-        !view_set(context, sv("title"), view_string(string_as_view(&post->title))) ||
+        !view_set(context, sv("title"),
+                  view_string(string_as_view(&post->title))) ||
         !view_set(context, sv("content"),
                   view_string(string_as_view(&post->content)))) {
         post_error(context, sv("500 Internal Server Error"),

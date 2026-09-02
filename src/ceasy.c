@@ -27,14 +27,15 @@ static bool ceasy_send_all(int client_fd, StringView data) {
     return true;
 }
 
-bool context_send_response(Context *context, StringView status,
-                           StringView content_type, StringView body) {
+bool context_send_bytes(Context *context, StringView status,
+                        StringView content_type, const void *data,
+                        size_t length) {
     String header;
     bool sent;
 
     if (context == NULL || context->response_sent || context->client_fd < 0 ||
         status.data == NULL || content_type.data == NULL ||
-        (body.length > 0 && body.data == NULL)) {
+        (length > 0 && data == NULL)) {
         return false;
     }
     header = context->arena != NULL ? string_new_in(context->arena)
@@ -46,12 +47,16 @@ bool context_send_response(Context *context, StringView status,
         !string_append_format(&header,
                               "\r\nContent-Length: %zu\r\n"
                               "Connection: close\r\n\r\n",
-                              body.length)) {
+                              length)) {
         string_destroy(&header);
         return false;
     }
-    sent = ceasy_send_all(context->client_fd, string_as_view(&header)) &&
-           ceasy_send_all(context->client_fd, body);
+    sent = ceasy_send_all(context->client_fd, string_as_view(&header));
+    if (sent && length > 0) {
+        sent = ceasy_send_all(
+            context->client_fd,
+            (StringView){.data = (const char *)data, .length = length});
+    }
     string_destroy(&header);
     if (sent) {
         context->response_sent = true;
@@ -59,14 +64,20 @@ bool context_send_response(Context *context, StringView status,
     return sent;
 }
 
+bool context_send_response(Context *context, StringView status,
+                           StringView content_type, StringView body) {
+    return context_send_bytes(context, status, content_type, body.data,
+                              body.length);
+}
+
 bool context_send_text(Context *context, StringView status, StringView body) {
-    return context_send_response(context, status,
-                                 sv("text/plain; charset=utf-8"), body);
+    return context_send_bytes(context, status, sv("text/plain; charset=utf-8"),
+                              body.data, body.length);
 }
 
 bool context_send_html(Context *context, StringView status, StringView body) {
-    return context_send_response(context, status,
-                                 sv("text/html; charset=utf-8"), body);
+    return context_send_bytes(context, status, sv("text/html; charset=utf-8"),
+                              body.data, body.length);
 }
 
 bool context_redirect(Context *context, StringView location) {
@@ -211,7 +222,10 @@ static void ceasy_handle_client(int client_fd, Router *router) {
     dispatch_result = router_dispatch(
         router, ceasy_method_name(context.request.method), path.data, &context);
     if (dispatch_result == ROUTER_NOT_FOUND) {
-        context_send_text(&context, sv("404 Not Found"), sv("not found\n"));
+        if (context.request.method == HTTP_METHOD_GET &&
+            !asset_serve(&context, context.request.path)) {
+            context_send_text(&context, sv("404 Not Found"), sv("not found\n"));
+        }
     } else if (dispatch_result == ROUTER_METHOD_NOT_ALLOWED) {
         context_send_text(&context, sv("405 Method Not Allowed"),
                           sv("method not allowed\n"));
