@@ -120,6 +120,15 @@ static void test_rendering(const char *directory) {
     records[1].name = string_from_in(&arena, sv("second"));
     records[1].score = 8;
     assert(view_set(&context, sv("page_title"), view_string(sv("Records"))));
+    assert(view_set(&context, sv("page_title"), view_string(sv("Updated"))));
+    {
+        ViewValue page_title;
+
+        assert(view_get(&context.view_data, sv("page_title"), &page_title));
+        assert(page_title.type == VIEW_VALUE_STRING);
+        assert(stringv_equal(page_title.as.string, sv("Updated")));
+    }
+    assert(view_set(&context, sv("page_title"), view_string(sv("Records"))));
     assert(view_set(&context, sv("records"),
                     view_collection(records, 2, &test_view_definition)));
     output = string_new_in(&arena);

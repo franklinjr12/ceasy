@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <ceasy/collection/string_map.h>
 #include <ceasy/model/model.h>
 #include <ceasy/string/string.h>
 
@@ -42,14 +43,7 @@ typedef struct ViewValue {
 } ViewValue;
 
 typedef struct {
-    StringView name;
-    ViewValue value;
-} ViewEntry;
-
-typedef struct {
-    ViewEntry *entries;
-    size_t length;
-    size_t capacity;
+    StringMap values;
 } ViewData;
 
 ViewValue view_string(StringView value);

@@ -114,6 +114,29 @@ string_append(&html, sv("</h1>"));
 arena_destroy(&arena);
 ```
 
+String maps
+-----------
+
+`StringMap` is an arena-friendly, string-keyed collection for heterogeneous
+values. Keys and string values passed through `sm_set` are copied; pointers
+remain borrowed, and `sm_struct` makes a shallow byte-for-byte object copy.
+
+```c
+StringMap values = {0};
+sm_init_in(&values, arena);
+sm_set(&values, sv("number"), 7);
+sm_set(&values, sv("name"), sv("Ceasy"));
+sm_set(&values, sv("active"), true);
+
+int64_t number;
+sm_get_int(&values, sv("number"), &number);
+sm_destroy(&values);
+```
+
+The map uses length-aware `StringView` keys, open addressing, linear probing,
+and unordered iteration. Mutating a map invalidates pointers returned by
+`sm_get` and an active iterator.
+
 StringView parsing is byte-oriented and does not silently trim whitespace.
 `stringv_equal_ignore_case`, `string_upper`, and `string_lower` use ASCII
 semantics. Arena-backed String memory is reclaimed by `arena_destroy`; heap

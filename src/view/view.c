@@ -104,53 +104,30 @@ static bool view_name_valid(StringView name) {
 }
 
 bool view_set(Context *context, StringView name, ViewValue value) {
-    ViewEntry *entries;
-
     if (context == NULL || context->arena == NULL || !view_name_valid(name)) {
         return false;
     }
-    for (size_t index = 0; index < context->view_data.length; index++) {
-        if (stringv_equal(context->view_data.entries[index].name, name)) {
-            context->view_data.entries[index].value = value;
-            return true;
-        }
+    if (context->view_data.values.allocator.alloc == NULL &&
+        !sm_init_in(&context->view_data.values, context->arena)) {
+        return false;
     }
-    if (context->view_data.length == context->view_data.capacity) {
-        size_t new_capacity = context->view_data.capacity == 0
-                                  ? 8
-                                  : context->view_data.capacity * 2;
-        if (new_capacity < context->view_data.capacity ||
-            new_capacity > SIZE_MAX / sizeof(*entries)) {
-            return false;
-        }
-        entries = arena_new_array(context->arena, ViewEntry, new_capacity);
-        if (entries == NULL) {
-            return false;
-        }
-        if (context->view_data.entries != NULL &&
-            context->view_data.length > 0) {
-            memcpy(entries, context->view_data.entries,
-                   context->view_data.length * sizeof(*entries));
-        }
-        context->view_data.entries = entries;
-        context->view_data.capacity = new_capacity;
-    }
-    context->view_data.entries[context->view_data.length++] =
-        (ViewEntry){.name = name, .value = value};
-    return true;
+    return sm_set_value(
+        &context->view_data.values, name,
+        sm_object(&context->view_data.values, &value, sizeof(value)));
 }
 
 bool view_get(const ViewData *data, StringView name, ViewValue *value) {
+    const ViewValue *stored;
+
     if (data == NULL || value == NULL || !view_name_valid(name)) {
         return false;
     }
-    for (size_t index = 0; index < data->length; index++) {
-        if (stringv_equal(data->entries[index].name, name)) {
-            *value = data->entries[index].value;
-            return true;
-        }
+    stored = sm_get_object_const(&data->values, name, sizeof(*stored));
+    if (stored == NULL) {
+        return false;
     }
-    return false;
+    *value = *stored;
+    return true;
 }
 
 StringView view_last_error(const Context *context) {

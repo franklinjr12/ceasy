@@ -2,6 +2,7 @@
 #define CEASY_H
 
 #include <ceasy/asset/asset.h>
+#include <ceasy/collection/string_map.h>
 #include <ceasy/context.h>
 #include <ceasy/database/database.h>
 #include <ceasy/http/http_server.h>
