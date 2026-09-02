@@ -184,6 +184,41 @@ size_t database_pending_writes(const Database *database) {
     return database == NULL ? 0 : database->write_count;
 }
 
+bool database_execute_sql(Database *database, StringView sql) {
+    sqlite3 *connection;
+    char *sql_copy;
+    char *sqlite_error = NULL;
+    int result;
+
+    if (database == NULL || sql.data == NULL || sql.length == SIZE_MAX) {
+        return false;
+    }
+    connection = database_connection(database);
+    if (connection == NULL || !database_flush(database) ||
+        sql.length > SIZE_MAX - 1) {
+        return false;
+    }
+    sql_copy = malloc(sql.length + 1);
+    if (sql_copy == NULL) {
+        database_set_error(database, "out of memory");
+        return false;
+    }
+    if (sql.length > 0) {
+        memcpy(sql_copy, sql.data, sql.length);
+    }
+    sql_copy[sql.length] = '\0';
+    result = sqlite3_exec(connection, sql_copy, NULL, NULL, &sqlite_error);
+    free(sql_copy);
+    if (result != SQLITE_OK) {
+        database_set_error(database, "%s",
+                           sqlite_error != NULL ? sqlite_error
+                                                : sqlite3_errmsg(connection));
+        sqlite3_free(sqlite_error);
+        return false;
+    }
+    return true;
+}
+
 void database_rows_free(DatabaseRows *rows) {
     if (rows == NULL) {
         return;
@@ -422,6 +457,38 @@ StringView database_column_text(DatabaseStatement *statement, int column) {
     }
     return (StringView){.data = (const char *)value,
                         .length = (size_t)sqlite3_column_bytes(handle, column)};
+}
+
+int database_column_count(DatabaseStatement *statement) {
+    sqlite3_stmt *handle = database_statement_handle(statement);
+
+    return handle == NULL ? 0 : sqlite3_column_count(handle);
+}
+
+StringView database_column_name(DatabaseStatement *statement, int column) {
+    sqlite3_stmt *handle = database_statement_handle(statement);
+    const char *name;
+
+    if (handle == NULL) {
+        return (StringView){0};
+    }
+    name = sqlite3_column_name(handle, column);
+    return stringv_from_cstr(name);
+}
+
+int64_t database_last_insert_id(Database *database) {
+    sqlite3 *connection =
+        database == NULL ? NULL : database_connection(database);
+
+    return connection == NULL ? 0
+                              : (int64_t)sqlite3_last_insert_rowid(connection);
+}
+
+int64_t database_changes(Database *database) {
+    sqlite3 *connection =
+        database == NULL ? NULL : database_connection(database);
+
+    return connection == NULL ? 0 : (int64_t)sqlite3_changes(connection);
 }
 
 void database_statement_destroy(DatabaseStatement *statement) {

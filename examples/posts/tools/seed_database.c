@@ -30,14 +30,7 @@ int main(int argc, char **argv) {
     }
 
     result =
-        run_sql(database, "CREATE TABLE IF NOT EXISTS posts ("
-                          "id INTEGER PRIMARY KEY,"
-                          "title TEXT NOT NULL,"
-                          "content TEXT NOT NULL,"
-                          "created_at TEXT NOT NULL,"
-                          "updated_at TEXT NOT NULL"
-                          ");"
-                          "BEGIN;"
+        run_sql(database, "BEGIN;"
                           "INSERT OR IGNORE INTO posts "
                           "(id, title, content, created_at, updated_at) VALUES "
                           "(1, 'Welcome to Ceasy', 'Ceasy is a small web "

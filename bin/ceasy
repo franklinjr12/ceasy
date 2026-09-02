@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -e
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+root_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
+
+(cd "$root_dir/tools/ceasy_cli" && "$root_dir/bin/cdev" build >/dev/null)
+exec "$root_dir/tools/ceasy_cli/build/bin/ceasy" "$@"

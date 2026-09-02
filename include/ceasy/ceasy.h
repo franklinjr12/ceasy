@@ -6,6 +6,7 @@
 #include <ceasy/http/http_server.h>
 #include <ceasy/http/request.h>
 #include <ceasy/memory/arena.h>
+#include <ceasy/model/model.h>
 #include <ceasy/rendering/html.h>
 #include <ceasy/routing/router.h>
 #include <ceasy/string/string.h>

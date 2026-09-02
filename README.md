@@ -12,10 +12,25 @@ cd examples/posts
 ../../bin/cdev build
 ```
 
-Seed and run Posts:
+Framework tooling uses `ceasy`; C project lifecycle uses `cdev`:
 
 ```bash
-mkdir -p db build
+bin/ceasy generate model Post title:string content:text
+bin/ceasy db:migrate
+```
+
+Migrations live under `db/migrations` and run in filename order. Ceasy owns
+each migration transaction; migration files should not contain `BEGIN`,
+`COMMIT`, or `ROLLBACK`. Generated model files are developer-owned and are not
+regenerated automatically. Naming uses simple English pluralization rules;
+irregular nouns are not handled yet.
+
+Run Posts:
+
+```bash
+cd examples/posts
+../../bin/ceasy db:migrate
+mkdir -p build
 clang tools/seed_database.c -lsqlite3 -o build/seed_database
 ./build/seed_database
 ../../bin/cdev run

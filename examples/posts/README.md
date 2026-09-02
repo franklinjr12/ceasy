@@ -3,12 +3,14 @@
 Posts is a small Ceasy application. It uses Ceasy as a local library dependency
 and exposes browser CRUD for SQLite-backed posts.
 
-Build and seed inside Ceasy's Docker environment:
+Migrate, build, and seed inside Ceasy's Docker environment. Delete the old
+development database once when adopting migrations:
 
 ```bash
-docker build -t ceasy .
+../../bin/ceasy db:migrate
 docker run --rm -v "${PWD}:/workspace" -w /workspace/examples/posts ceasy \
-  bash -c 'mkdir -p db build && clang tools/seed_database.c -lsqlite3 -o build/seed_database && ./build/seed_database && ../../bin/cdev build'
+  bash -c 'mkdir -p build && clang tools/seed_database.c -lsqlite3 -o build/seed_database && ./build/seed_database'
+../../bin/cdev build
 ```
 
 Run app:

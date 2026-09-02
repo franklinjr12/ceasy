@@ -3,6 +3,8 @@
 
 #include <ceasy/ceasy.h>
 
+#include "models/post.h"
+
 void posts_index(Context *context);
 void posts_show(Context *context);
 void posts_new(Context *context);

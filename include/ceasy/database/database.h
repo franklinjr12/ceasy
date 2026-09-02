@@ -46,6 +46,9 @@ bool database_write(Database *database, const char *sql);
 bool database_flush(Database *database);
 size_t database_pending_writes(const Database *database);
 
+/* Executes trusted SQL immediately. StringView need not be null-terminated. */
+bool database_execute_sql(Database *database, StringView sql);
+
 /* Rows and strings belong to caller until database_rows_free. NULL means SQL
  * NULL. */
 bool database_read(Database *database, const char *sql, DatabaseRows *rows);
@@ -63,6 +66,11 @@ bool database_execute(DatabaseStatement *statement);
 DatabaseStepResult database_step(DatabaseStatement *statement);
 int64_t database_column_int64(DatabaseStatement *statement, int column);
 StringView database_column_text(DatabaseStatement *statement, int column);
+int database_column_count(DatabaseStatement *statement);
+/* Column name borrows SQLite statement storage until finalize. */
+StringView database_column_name(DatabaseStatement *statement, int column);
+int64_t database_last_insert_id(Database *database);
+int64_t database_changes(Database *database);
 /* Column text borrows SQLite statement storage until next step/finalize. */
 void database_statement_destroy(DatabaseStatement *statement);
 
