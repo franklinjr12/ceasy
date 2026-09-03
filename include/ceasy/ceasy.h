@@ -2,16 +2,23 @@
 #define CEASY_H
 
 #include <ceasy/asset/asset.h>
+#include <ceasy/auth/auth.h>
 #include <ceasy/collection/string_map.h>
+#include <ceasy/config/config.h>
 #include <ceasy/context.h>
 #include <ceasy/database/database.h>
+#include <ceasy/flash/flash.h>
 #include <ceasy/http/http_server.h>
 #include <ceasy/http/request.h>
 #include <ceasy/memory/arena.h>
 #include <ceasy/model/model.h>
 #include <ceasy/rendering/html.h>
 #include <ceasy/routing/router.h>
+#include <ceasy/security/csrf.h>
+#include <ceasy/security/password.h>
+#include <ceasy/session/session.h>
 #include <ceasy/string/string.h>
+#include <ceasy/validation/validation.h>
 #include <ceasy/view/view.h>
 
 /* Application route hook. Define this in application code to replace defaults.

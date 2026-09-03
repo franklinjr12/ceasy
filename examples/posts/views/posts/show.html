@@ -1,16 +1,1 @@
-<article class="post-card">
-    <h1 class="post-title">{{post.title}}</h1>
-
-    <p class="post-content">{{post.content}}</p>
-
-    <div class="post-actions">
-        <a class="button" href="/posts/{{post.id}}/edit">Edit</a>
-
-        <form class="delete-form inline-form" method="POST" action="/posts/{{post.id}}">
-            <input type="hidden" name="_method" value="DELETE">
-            <button class="button button-danger" type="submit">Delete</button>
-        </form>
-    </div>
-</article>
-
-<p><a href="/posts">Back</a></p>
+<p><a href="/posts">← Back to articles</a></p><article class="article-shell article"><p class="eyebrow">{{published_label}}</p><h1 class="post-title">{{post.title}}</h1><p class="article-summary">{{post.summary}}</p><p class="metadata">By <a href="/authors/{{post.user_id}}">{{author.name}}</a> · {{post.published_at}}</p><hr><div class="post-content">{{post.content}}</div>{{#signed_in}}<p><a class="button button-secondary" href="/posts/{{post.id}}/edit">Edit article</a></p>{{/signed_in}}</article><section id="comments" class="article-shell comments"><h2>Comments</h2>{{#comments}}<article class="comment"><div class="avatar">{{author_name}}</div><div><p class="metadata"><strong>{{author_name}}</strong> · {{created_at}}</p><p>{{content}}</p>{{#can_delete}}<form class="inline-form delete-form" method="POST" action="/comments/{{id}}"><input type="hidden" name="_method" value="DELETE"><input type="hidden" name="_csrf" value="{{csrf_token}}"><button class="link-button danger-text" type="submit">Delete</button></form>{{/can_delete}}</div></article>{{/comments}}{{^comments}}<p class="muted">No comments yet. Start the conversation.</p>{{/comments}}{{#signed_in}}<form class="comment-form" method="POST" action="/posts/{{post.id}}/comments"><input type="hidden" name="_csrf" value="{{csrf_token}}"><label for="comment">Join the discussion</label><textarea id="comment" name="comment" maxlength="2000">{{comment}}</textarea>{{#comment_error}}<p class="field-error">{{comment_error}}</p>{{/comment_error}}<button class="button" type="submit">Add comment</button></form>{{/signed_in}}{{^signed_in}}<p class="muted">Sign in to join the discussion.</p>{{/signed_in}}</section>

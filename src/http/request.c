@@ -118,6 +118,7 @@ request_parse_headers(Request *request, StringView raw, size_t header_end) {
     request->path = target;
     size_t query_index;
     if (stringv_find_char(request->path, '?', &query_index)) {
+        request->query_string = stringv_from(request->path, query_index + 1);
         request->path = stringv_slice(request->path, 0, query_index);
     }
     if (request->path.length == 0) {

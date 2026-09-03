@@ -143,13 +143,18 @@ Router *router_default(void) {
 
 bool router_add(Router *router, HttpMethod method, const char *path,
                 RouteHandler handler) {
+    return router_add_guarded(router, method, path, NULL, handler);
+}
+
+bool router_add_guarded(Router *router, HttpMethod method, const char *path,
+                        RouteGuard guard, RouteHandler handler) {
     if (router == NULL || method == HTTP_METHOD_UNKNOWN ||
         !router_valid_path(path) || handler == NULL ||
         router->route_count >= ROUTER_MAX_ROUTES) {
         return false;
     }
-    router->routes[router->route_count++] =
-        (RouterRoute){.path = path, .method = method, .handler = handler};
+    router->routes[router->route_count++] = (RouterRoute){
+        .path = path, .method = method, .handler = handler, .guard = guard};
     return true;
 }
 
@@ -169,6 +174,23 @@ bool router_route_patch(Router *router, const char *path,
 bool router_route_delete(Router *router, const char *path,
                          RouteHandler handler) {
     return router_add(router, HTTP_METHOD_DELETE, path, handler);
+}
+
+bool router_route_get_guarded(Router *router, const char *path,
+                              RouteGuard guard, RouteHandler handler) {
+    return router_add_guarded(router, HTTP_METHOD_GET, path, guard, handler);
+}
+bool router_route_post_guarded(Router *router, const char *path,
+                               RouteGuard guard, RouteHandler handler) {
+    return router_add_guarded(router, HTTP_METHOD_POST, path, guard, handler);
+}
+bool router_route_patch_guarded(Router *router, const char *path,
+                                RouteGuard guard, RouteHandler handler) {
+    return router_add_guarded(router, HTTP_METHOD_PATCH, path, guard, handler);
+}
+bool router_route_delete_guarded(Router *router, const char *path,
+                                 RouteGuard guard, RouteHandler handler) {
+    return router_add_guarded(router, HTTP_METHOD_DELETE, path, guard, handler);
 }
 
 bool router_default_route_get(const char *path, RouteHandler handler) {
@@ -217,7 +239,9 @@ RouterResult router_dispatch(Router *router, const char *method,
         memcpy(context->route_params, params,
                param_count * sizeof(context->route_params[0]));
         context->route_param_count = param_count;
-        route->handler(context);
+        if (route->guard == NULL || route->guard(context)) {
+            route->handler(context);
+        }
         return ROUTER_DISPATCHED;
     }
     if (router_path_exists(router, path)) {

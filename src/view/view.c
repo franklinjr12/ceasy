@@ -600,7 +600,7 @@ bool render_without_layout(Context *context, StringView path) {
     return context_send_html(context, sv("200 OK"), string_as_view(&output));
 }
 
-bool render(Context *context, StringView path) {
+bool render_status(Context *context, StringView path, StringView status) {
     String output;
 
     if (context == NULL || context->arena == NULL) {
@@ -612,5 +612,9 @@ bool render(Context *context, StringView path) {
                           view_last_error(context));
         return false;
     }
-    return context_send_html(context, sv("200 OK"), string_as_view(&output));
+    return context_send_html(context, status, string_as_view(&output));
+}
+
+bool render(Context *context, StringView path) {
+    return render_status(context, path, sv("200 OK"));
 }

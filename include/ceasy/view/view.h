@@ -109,6 +109,7 @@ const ViewBundle *ceasy_view_bundle(void);
 /* Renders a view without applying the conventional application layout. */
 bool view_render_to_string(Context *context, StringView path, String *output);
 bool render(Context *context, StringView path);
+bool render_status(Context *context, StringView path, StringView status);
 bool render_without_layout(Context *context, StringView path);
 
 #endif

@@ -8,6 +8,15 @@ int main(void) {
 
     assert(arena_init(&arena, 128));
     context.arena = &arena;
+    context.request.query_string = sv("page=2&q=hello+world&empty=&q=again");
+    assert(context_parse_query(&context));
+    assert(stringv_equal(context_query(&context, sv("page")), sv("2")));
+    assert(stringv_equal(context_query(&context, sv("q")), sv("hello world")));
+    assert(context_query(&context, sv("empty")).length == 0);
+    context = (Context){.arena = &arena};
+    context.request.query_string = sv("q=%ZZ");
+    assert(!context_parse_query(&context));
+    context = (Context){.arena = &arena};
     context.request.content_type =
         sv("application/x-www-form-urlencoded; charset=UTF-8");
     context.request.body = sv("title=Hello+World&content=a%26b&empty=");

@@ -1,5 +1,7 @@
 #include "ceasy/context.h"
 
+#include <string.h>
+
 static bool context_hex_digit(char value, unsigned char *result) {
     if (value >= '0' && value <= '9') {
         *result = (unsigned char)(value - '0');
@@ -114,6 +116,110 @@ bool context_parse_form(Context *context) {
             (FormParam){.name = decoded_name, .value = decoded_value};
     }
     return true;
+}
+
+bool context_parse_query(Context *context) {
+    StringView remaining;
+
+    if (context == NULL) {
+        return false;
+    }
+    if (context->query_parsed) {
+        return context->query_parse_ok;
+    }
+    context->query_parsed = true;
+    context->query_parse_ok = true;
+    remaining = context->request.query_string;
+    while (remaining.length > 0) {
+        StringView pair;
+        StringView name;
+        StringView value;
+        StringView next;
+        StringView decoded_name;
+        StringView decoded_value;
+
+        if (stringv_split_once_char(remaining, '&', &pair, &next)) {
+            remaining = next;
+        } else {
+            pair = remaining;
+            remaining = (StringView){0};
+        }
+        if (!stringv_split_once_char(pair, '=', &name, &value)) {
+            name = pair;
+            value = (StringView){0};
+        }
+        if (context->query_count >= CEASY_MAX_QUERY_PARAMS ||
+            !context_form_decode(context, name, &decoded_name) ||
+            !context_form_decode(context, value, &decoded_value)) {
+            context->query_parse_ok = false;
+            return false;
+        }
+        context->query_params[context->query_count++] =
+            (QueryParam){.name = decoded_name, .value = decoded_value};
+    }
+    return true;
+}
+
+StringView context_query(Context *context, StringView name) {
+    if (context == NULL || !context_parse_query(context)) {
+        return (StringView){0};
+    }
+    for (size_t index = 0; index < context->query_count; index++) {
+        if (stringv_equal(context->query_params[index].name, name)) {
+            return context->query_params[index].value;
+        }
+    }
+    return (StringView){0};
+}
+
+static bool context_header_value_valid(StringView value) {
+    if (value.data == NULL && value.length > 0) {
+        return false;
+    }
+    return !stringv_contains(value, sv("\r")) &&
+           !stringv_contains(value, sv("\n"));
+}
+
+bool context_add_header(Context *context, StringView name, StringView value) {
+    String name_copy;
+    String value_copy;
+
+    if (context == NULL || context->arena == NULL || name.length == 0 ||
+        name.data == NULL || !context_header_value_valid(name) ||
+        !context_header_value_valid(value) ||
+        context->response_header_count >= CEASY_MAX_RESPONSE_HEADERS) {
+        return false;
+    }
+    name_copy = string_from_in(context->arena, name);
+    value_copy = string_from_in(context->arena, value);
+    if (name_copy.data == NULL || value_copy.data == NULL) {
+        return false;
+    }
+    context->response_headers[context->response_header_count++] =
+        (ResponseHeader){.name = string_as_view(&name_copy),
+                         .value = string_as_view(&value_copy)};
+    return true;
+}
+
+bool context_set_header(Context *context, StringView name, StringView value) {
+    if (context == NULL || context->arena == NULL || name.length == 0 ||
+        name.data == NULL || !context_header_value_valid(name) ||
+        !context_header_value_valid(value)) {
+        return false;
+    }
+    for (size_t index = 0; index < context->response_header_count; index++) {
+        if (stringv_equal_ignore_case(context->response_headers[index].name,
+                                      name)) {
+            String value_copy = string_from_in(context->arena, value);
+            if (value_copy.data == NULL) {
+                return false;
+            }
+            context->response_headers[index].value =
+                string_as_view(&value_copy);
+            return true;
+        }
+    }
+    return context_add_header(context, name, value);
 }
 
 StringView context_form(Context *context, StringView name) {

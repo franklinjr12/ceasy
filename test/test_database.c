@@ -49,5 +49,46 @@ int main(void) {
     database_statement_destroy(&statement);
     assert(database_close(&database));
 
+    assert(database_open(&database, ":memory:"));
+    assert(database_execute_sql(
+        &database, sv("CREATE TABLE values_table (value INTEGER)")));
+    assert(database_execute_sql(
+        &database,
+        sv("CREATE TABLE parent (id INTEGER PRIMARY KEY); "
+           "CREATE TABLE child (parent_id INTEGER REFERENCES parent(id))")));
+    assert(
+        database_execute_sql(&database, sv("INSERT INTO parent VALUES (1)")));
+    assert(
+        !database_execute_sql(&database, sv("INSERT INTO child VALUES (99)")));
+    assert(database_begin(&database));
+    assert(!database_begin(&database));
+    {
+        DatabaseStatement transaction_statement = {0};
+        assert(database_prepare(&database, &transaction_statement,
+                                sv("INSERT INTO values_table VALUES (1)")));
+        assert(database_execute(&transaction_statement));
+        database_statement_destroy(&transaction_statement);
+    }
+    assert(database_rollback(&database));
+    assert(database_pending_writes(&database) == 0);
+    assert(database_begin(&database));
+    {
+        DatabaseStatement transaction_statement = {0};
+        assert(database_prepare(&database, &transaction_statement,
+                                sv("INSERT INTO values_table VALUES (2)")));
+        assert(database_execute(&transaction_statement));
+        database_statement_destroy(&transaction_statement);
+    }
+    assert(database_commit(&database));
+    {
+        DatabaseStatement transaction_statement = {0};
+        assert(database_prepare(&database, &transaction_statement,
+                                sv("SELECT COUNT(*) FROM values_table")));
+        assert(database_step(&transaction_statement) == DATABASE_STEP_ROW);
+        assert(database_column_int64(&transaction_statement, 0) == 1);
+        database_statement_destroy(&transaction_statement);
+    }
+    assert(database_close(&database));
+
     return 0;
 }

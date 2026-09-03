@@ -34,6 +34,7 @@ struct Database {
     DatabaseWrite *writes;
     size_t write_count;
     size_t write_capacity;
+    bool in_transaction;
     char error[256];
 };
 
@@ -48,6 +49,9 @@ size_t database_pending_writes(const Database *database);
 
 /* Executes trusted SQL immediately. StringView need not be null-terminated. */
 bool database_execute_sql(Database *database, StringView sql);
+bool database_begin(Database *database);
+bool database_commit(Database *database);
+bool database_rollback(Database *database);
 
 /* Rows and strings belong to caller until database_rows_free. NULL means SQL
  * NULL. */
@@ -62,10 +66,14 @@ bool database_bind_text(DatabaseStatement *statement, int index,
                         StringView value);
 bool database_bind_int64(DatabaseStatement *statement, int index,
                          int64_t value);
+bool database_bind_blob(DatabaseStatement *statement, int index,
+                        const void *data, size_t length);
 bool database_execute(DatabaseStatement *statement);
 DatabaseStepResult database_step(DatabaseStatement *statement);
 int64_t database_column_int64(DatabaseStatement *statement, int column);
 StringView database_column_text(DatabaseStatement *statement, int column);
+const void *database_column_blob(DatabaseStatement *statement, int column,
+                                 size_t *length);
 int database_column_count(DatabaseStatement *statement);
 /* Column name borrows SQLite statement storage until finalize. */
 StringView database_column_name(DatabaseStatement *statement, int column);

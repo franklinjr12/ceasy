@@ -1,5 +1,10 @@
 #include "ceasy/ceasy.h"
 
+#include <ceasy/config/config.h>
+#include <ceasy/security/csrf.h>
+
+#include <sodium.h>
+
 #include <errno.h>
 #include <signal.h>
 #include <stdio.h>
@@ -27,6 +32,37 @@ static bool ceasy_send_all(int client_fd, StringView data) {
     return true;
 }
 
+static bool ceasy_prepare_response(Context *context) {
+    if (context == NULL || !session_commit(context)) {
+        return false;
+    }
+    if (context->arena == NULL) {
+        return true;
+    }
+    return context_set_header(context, sv("X-Content-Type-Options"),
+                              sv("nosniff")) &&
+           context_set_header(context, sv("Referrer-Policy"),
+                              sv("strict-origin-when-cross-origin")) &&
+           context_set_header(context, sv("X-Frame-Options"),
+                              sv("SAMEORIGIN")) &&
+           (context->request_id.length == 0 ||
+            context_set_header(context, sv("X-Request-ID"),
+                               context->request_id));
+}
+
+static bool ceasy_append_response_headers(String *header, Context *context) {
+    for (size_t index = 0; index < context->response_header_count; index++) {
+        ResponseHeader *item = &context->response_headers[index];
+        if (!string_append(header, item->name) ||
+            !string_append(header, sv(": ")) ||
+            !string_append(header, item->value) ||
+            !string_append(header, sv("\r\n"))) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool context_send_bytes(Context *context, StringView status,
                         StringView content_type, const void *data,
                         size_t length) {
@@ -38,14 +74,19 @@ bool context_send_bytes(Context *context, StringView status,
         (length > 0 && data == NULL)) {
         return false;
     }
+    if (!ceasy_prepare_response(context)) {
+        return false;
+    }
     header = context->arena != NULL ? string_new_in(context->arena)
                                     : string_new_heap();
     if (!string_append(&header, sv("HTTP/1.1 ")) ||
         !string_append(&header, status) ||
         !string_append(&header, sv("\r\nContent-Type: ")) ||
         !string_append(&header, content_type) ||
+        !string_append(&header, sv("\r\n")) ||
+        !ceasy_append_response_headers(&header, context) ||
         !string_append_format(&header,
-                              "\r\nContent-Length: %zu\r\n"
+                              "Content-Length: %zu\r\n"
                               "Connection: close\r\n\r\n",
                               length)) {
         string_destroy(&header);
@@ -88,11 +129,16 @@ bool context_redirect(Context *context, StringView location) {
         location.data == NULL) {
         return false;
     }
+    if (!ceasy_prepare_response(context)) {
+        return false;
+    }
     header = context->arena != NULL ? string_new_in(context->arena)
                                     : string_new_heap();
     if (!string_append(&header, sv("HTTP/1.1 303 See Other\r\nLocation: ")) ||
         !string_append(&header, location) ||
-        !string_append(&header, sv("\r\nContent-Length: 0\r\n"
+        !string_append(&header, sv("\r\n")) ||
+        !ceasy_append_response_headers(&header, context) ||
+        !string_append(&header, sv("Content-Length: 0\r\n"
                                    "Connection: close\r\n\r\n"))) {
         string_destroy(&header);
         return false;
@@ -156,6 +202,7 @@ static void ceasy_handle_client(int client_fd, Router *router) {
     RequestParseResult parsed;
     RouterResult dispatch_result;
     String path;
+    String database_path;
 
     memset(&context, 0, sizeof(context));
     context.client_fd = client_fd;
@@ -164,7 +211,23 @@ static void ceasy_handle_client(int client_fd, Router *router) {
         return;
     }
     context.arena = &arena;
-    if (!database_open(&database, "db/development.sqlite3")) {
+    database_path = string_from_in(&arena, ceasy_database_path());
+    if (sodium_init() >= 0) {
+        unsigned char request_id_bytes[8];
+        char request_id[32];
+
+        randombytes_buf(request_id_bytes, sizeof(request_id_bytes));
+        snprintf(request_id, sizeof(request_id),
+                 "%02x%02x%02x%02x%02x%02x%02x%02x", request_id_bytes[0],
+                 request_id_bytes[1], request_id_bytes[2], request_id_bytes[3],
+                 request_id_bytes[4], request_id_bytes[5], request_id_bytes[6],
+                 request_id_bytes[7]);
+        String request_id_copy =
+            string_from_in(&arena, stringv_from_cstr(request_id));
+        context.request_id = string_as_view(&request_id_copy);
+    }
+    if (database_path.data == NULL ||
+        !database_open(&database, string_cstr(&database_path))) {
         context_send_text(&context, sv("500 Internal Server Error"),
                           sv("database error\n"));
         arena_destroy(&arena);
@@ -187,7 +250,10 @@ static void ceasy_handle_client(int client_fd, Router *router) {
         return;
     }
 
-    if (context.request.method == HTTP_METHOD_POST &&
+    if ((context.request.method == HTTP_METHOD_POST ||
+         context.request.method == HTTP_METHOD_PATCH ||
+         context.request.method == HTTP_METHOD_PUT ||
+         context.request.method == HTTP_METHOD_DELETE) &&
         context.request.content_type.length >=
             sizeof("application/x-www-form-urlencoded") - 1 &&
         stringv_equal_ignore_case(
@@ -207,6 +273,19 @@ static void ceasy_handle_client(int client_fd, Router *router) {
             context.request.method = HTTP_METHOD_PATCH;
         } else if (stringv_equal_ignore_case(override, sv("DELETE"))) {
             context.request.method = HTTP_METHOD_DELETE;
+        }
+        if (context.request.method == HTTP_METHOD_POST ||
+            context.request.method == HTTP_METHOD_PATCH ||
+            context.request.method == HTTP_METHOD_PUT ||
+            context.request.method == HTTP_METHOD_DELETE) {
+            if (!csrf_verify(&context, context_form(&context, sv("_csrf")))) {
+                context_send_text(&context, sv("403 Forbidden"),
+                                  sv("forbidden\n"));
+                database_close(&database);
+                arena_destroy(&arena);
+                close(client_fd);
+                return;
+            }
         }
     }
 
@@ -232,6 +311,10 @@ static void ceasy_handle_client(int client_fd, Router *router) {
     } else if (!context.response_sent) {
         context_send_text(&context, sv("204 No Content"), (StringView){0});
     }
+    fprintf(stderr, "[%.*s] %s %.*s\n", (int)context.request_id.length,
+            context.request_id.data == NULL ? "" : context.request_id.data,
+            ceasy_method_name(context.request.method),
+            (int)context.request.path.length, context.request.path.data);
     database_close(&database);
     arena_destroy(&arena);
     close(client_fd);
@@ -251,9 +334,14 @@ void ceasy_run(int argc, char **argv) {
 
     (void)argc;
     (void)argv;
+    if (!ceasy_config_init()) {
+        fprintf(stderr, "invalid Ceasy configuration: %s\n",
+                ceasy_config_error());
+        return;
+    }
     router_reset(router);
     routes(router);
-    if (!http_server_start(&server, 3000)) {
+    if (!http_server_start(&server, ceasy_port())) {
         fprintf(stderr, "could not start HTTP server: %s\n",
                 http_server_error(&server));
         return;

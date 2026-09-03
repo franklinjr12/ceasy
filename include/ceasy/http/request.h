@@ -27,6 +27,7 @@ typedef struct {
 typedef struct {
     HttpMethod method;
     StringView path;
+    StringView query_string;
     StringView body;
     StringView content_type;
     size_t content_length;

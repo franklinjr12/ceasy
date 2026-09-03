@@ -1,9 +1,1 @@
-document.addEventListener("DOMContentLoaded", () => {
-    document.querySelectorAll(".delete-form").forEach((form) => {
-        form.addEventListener("submit", (event) => {
-            if (!window.confirm("Delete this post?")) {
-                event.preventDefault();
-            }
-        });
-    });
-});
+document.addEventListener("DOMContentLoaded",()=>{document.querySelectorAll(".delete-form").forEach(form=>form.addEventListener("submit",event=>{const comment=form.action.includes("comments");if(!window.confirm(comment?"Delete this comment?":"Delete this post? This cannot be undone."))event.preventDefault()}));document.querySelectorAll(".flash-dismiss").forEach(button=>button.addEventListener("click",()=>button.parentElement.remove()));});

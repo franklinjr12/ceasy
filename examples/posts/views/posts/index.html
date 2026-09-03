@@ -1,14 +1,1 @@
-<div class="page-heading">
-    <h1>Posts</h1>
-    <a class="button" href="/posts/new">New post</a>
-</div>
-
-<section class="post-list">
-    {{#posts}}
-        {{> posts/post}}
-    {{/posts}}
-</section>
-
-{{^posts}}
-    <p class="muted">No posts yet.</p>
-{{/posts}}
+<section class="hero"><p class="eyebrow">CEASY JOURNAL</p><h1>Ideas built with C.</h1><p class="lead">A small publishing community exploring web development, memory, and thoughtful software.</p></section><div class="page-heading"><div><h2>Latest articles</h2><p class="muted">Read what the community is working through.</p></div>{{#signed_in}}<a class="button" href="/posts/new">Write an article</a>{{/signed_in}}</div><form class="search-form" method="GET" action="/posts"><input name="q" value="{{query}}" placeholder="Search articles"><button class="button" type="submit">Search</button></form><section class="post-list">{{#posts}}{{> posts/post}}{{/posts}}{{^posts}}<p class="muted">No posts yet.</p>{{/posts}}</section><nav class="pagination" aria-label="Pagination">{{#has_previous}}<a href="/posts?page={{previous_page}}&q={{query}}">Previous</a>{{/has_previous}}<span>Page {{current_page}}</span>{{#has_next}}<a href="/posts?page={{next_page}}&q={{query}}">Next</a>{{/has_next}}</nav>

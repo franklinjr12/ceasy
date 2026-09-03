@@ -405,7 +405,9 @@ String string_from(Allocator allocator, StringView value) {
         memcpy(string.data, value.data, value.length);
     }
     string.length = value.length;
-    string.data[string.length] = '\0';
+    if (string.data != NULL) {
+        string.data[string.length] = '\0';
+    }
     return string;
 }
 

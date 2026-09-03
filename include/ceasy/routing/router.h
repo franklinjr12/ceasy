@@ -9,12 +9,14 @@
 typedef struct Context Context;
 
 typedef void (*RouteHandler)(Context *context);
+typedef bool (*RouteGuard)(Context *context);
 
 typedef struct {
     /* Path is borrowed; route paths should remain alive for router lifetime. */
     const char *path;
     HttpMethod method;
     RouteHandler handler;
+    RouteGuard guard;
 } RouterRoute;
 
 #define ROUTER_MAX_ROUTES 128
@@ -36,6 +38,8 @@ Router *router_default(void);
 
 bool router_add(Router *router, HttpMethod method, const char *path,
                 RouteHandler handler);
+bool router_add_guarded(Router *router, HttpMethod method, const char *path,
+                        RouteGuard guard, RouteHandler handler);
 
 bool router_route_get(Router *router, const char *path, RouteHandler handler);
 bool router_route_post(Router *router, const char *path, RouteHandler handler);
@@ -47,6 +51,14 @@ bool router_default_route_get(const char *path, RouteHandler handler);
 bool router_default_route_post(const char *path, RouteHandler handler);
 bool router_default_route_patch(const char *path, RouteHandler handler);
 bool router_default_route_delete(const char *path, RouteHandler handler);
+bool router_route_get_guarded(Router *router, const char *path,
+                              RouteGuard guard, RouteHandler handler);
+bool router_route_post_guarded(Router *router, const char *path,
+                               RouteGuard guard, RouteHandler handler);
+bool router_route_patch_guarded(Router *router, const char *path,
+                                RouteGuard guard, RouteHandler handler);
+bool router_route_delete_guarded(Router *router, const char *path,
+                                 RouteGuard guard, RouteHandler handler);
 
 bool router_path_exists(const Router *router, const char *path);
 RouterResult router_dispatch(Router *router, const char *method,

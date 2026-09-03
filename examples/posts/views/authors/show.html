@@ -1,0 +1,1 @@
+<section class="profile"><p class="eyebrow">AUTHOR</p><h1>{{author.name}}</h1><p class="lead">{{author.bio}}</p><p class="metadata">Member since {{author.created_at}}</p></section><h2>Published articles</h2><section class="post-list">{{#posts}}{{> posts/post}}{{/posts}}{{^posts}}<p class="muted">No published articles yet.</p>{{/posts}}</section>

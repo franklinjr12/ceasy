@@ -1,0 +1,40 @@
+# Build from the repository root:
+#   docker build -f examples/posts/Dockerfile.production -t ceasy-journal .
+
+FROM debian:bookworm-slim AS build
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends clang clang-format \
+       libclang-rt-14-dev libsqlite3-dev libsodium-dev ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+COPY . /workspace
+
+WORKDIR /workspace/examples/posts
+RUN ../../bin/ceasy views:compile \
+    && ../../bin/ceasy assets:compile \
+    && ../../bin/cdev build
+
+FROM debian:bookworm-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libsqlite3-0 libsodium23 \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --system --create-home --home-dir /app ceasy \
+    && mkdir /data \
+    && chown ceasy:ceasy /data
+
+WORKDIR /app
+COPY --from=build /workspace/examples/posts/build/bin/posts /app/posts
+
+ENV CEASY_ENV=production \
+    CEASY_PORT=3000 \
+    CEASY_DATABASE_PATH=/data/blog.sqlite3
+
+USER ceasy
+EXPOSE 3000
+VOLUME ["/data"]
+CMD ["/app/posts"]

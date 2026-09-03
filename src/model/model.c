@@ -96,9 +96,6 @@ static bool model_map_row(Context *context, const ModelDefinition *definition,
         case MODEL_FIELD_STRING:
             *(String *)address = string_from_in(
                 context->arena, database_column_text(statement, (int)index));
-            if (((String *)address)->data == NULL) {
-                return false;
-            }
             break;
         case MODEL_FIELD_INT64:
             *(int64_t *)address = database_column_int64(statement, (int)index);

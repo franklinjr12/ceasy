@@ -28,6 +28,23 @@ int main(void) {
     close(sockets[0]);
     close(sockets[1]);
 
+    Arena arena;
+    assert(arena_init(&arena, 4096));
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) == 0);
+    context = (Context){.client_fd = sockets[0], .arena = &arena};
+    assert(context_set_header(&context, sv("X-Test"), sv("one")));
+    assert(context_add_header(&context, sv("Set-Cookie"), sv("a=1")));
+    assert(context_add_header(&context, sv("Set-Cookie"), sv("b=2")));
+    assert(context_send_text(&context, sv("201 Created"), sv("ok")));
+    read_response(sockets[1], response, sizeof(response));
+    assert(strstr(response, "X-Test: one") != NULL);
+    assert(strstr(response, "Set-Cookie: a=1") != NULL);
+    assert(strstr(response, "Set-Cookie: b=2") != NULL);
+    assert(strstr(response, "X-Content-Type-Options: nosniff") != NULL);
+    close(sockets[0]);
+    close(sockets[1]);
+    arena_destroy(&arena);
+
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) == 0);
     context = (Context){.client_fd = sockets[0]};
     assert(context_redirect(&context, sv("/posts")));

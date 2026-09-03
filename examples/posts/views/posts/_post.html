@@ -1,17 +1,1 @@
-<article class="post-card">
-    <h2 class="post-title">
-        <a href="/posts/{{id}}">
-            {{title}}
-        </a>
-    </h2>
-
-    <p class="post-content">{{content}}</p>
-
-    <div class="post-actions">
-        <a class="button" href="/posts/{{id}}/edit">Edit</a>
-        <form class="delete-form inline-form" method="POST" action="/posts/{{id}}">
-            <input type="hidden" name="_method" value="DELETE">
-            <button class="button button-danger" type="submit">Delete</button>
-        </form>
-    </div>
-</article>
+<article class="post-card"><p class="eyebrow">ARTICLE</p><h2><a href="/posts/{{id}}">{{title}}</a></h2><p class="post-summary">{{summary}}</p><p class="metadata"><a href="/authors/{{author_id}}">{{author_name}}</a> · {{published_at}} · {{comment_count}} comments</p><a class="read-more" href="/posts/{{id}}">Read article →</a></article>

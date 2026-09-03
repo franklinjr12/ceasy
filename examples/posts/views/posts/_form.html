@@ -1,13 +1,1 @@
-<form class="post-form" method="POST" action="{{form_action}}">
-    {{#editing}}
-        <input type="hidden" name="_method" value="PATCH">
-    {{/editing}}
-
-    <label for="post-title">Title</label>
-    <input id="post-title" name="title" value="{{title}}">
-
-    <label for="post-content">Content</label>
-    <textarea id="post-content" name="content">{{content}}</textarea>
-
-    <button class="button" type="submit">Save</button>
-</form>
+<form class="post-form editor" method="POST" action="{{form_action}}"><input type="hidden" name="_csrf" value="{{csrf_token}}">{{#editing}}<input type="hidden" name="_method" value="PATCH">{{/editing}}{{#errors}}<p class="form-error-summary">{{message}}</p>{{/errors}}<label for="post-title">Title</label><input id="post-title" name="title" maxlength="200" value="{{title}}">{{#title_error}}<p class="field-error">{{title_error}}</p>{{/title_error}}<label for="post-summary">Summary</label><input id="post-summary" name="summary" maxlength="500" value="{{summary}}">{{#summary_error}}<p class="field-error">{{summary_error}}</p>{{/summary_error}}<label for="post-content">Content</label><textarea id="post-content" name="content">{{content}}</textarea>{{#content_error}}<p class="field-error">{{content_error}}</p>{{/content_error}}<div class="form-actions"><button class="button button-secondary" name="intent" value="draft" type="submit">Save draft</button><button class="button" name="intent" value="publish" type="submit">Publish</button><a href="/dashboard">Cancel</a></div></form>

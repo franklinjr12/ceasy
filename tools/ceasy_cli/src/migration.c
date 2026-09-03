@@ -202,12 +202,25 @@ bool migration_run(const CeasyProject *project) {
         free(migrations);
         return false;
     }
-    if (!project_path(project, "db/development.sqlite3", database_path,
-                      sizeof(database_path)) ||
-        !database_open(&database, database_path)) {
-        fprintf(stderr, "error: cannot open migration database\n");
-        free(migrations);
-        return false;
+    {
+        const char *configured_path = getenv("CEASY_DATABASE_PATH");
+        bool has_configured_path =
+            configured_path != NULL && configured_path[0] != '\0';
+
+        if (has_configured_path &&
+            strlen(configured_path) < sizeof(database_path)) {
+            memcpy(database_path, configured_path, strlen(configured_path) + 1);
+        }
+        if ((has_configured_path &&
+             strlen(configured_path) >= sizeof(database_path)) ||
+            (!has_configured_path &&
+             !project_path(project, "db/development.sqlite3", database_path,
+                           sizeof(database_path))) ||
+            !database_open(&database, database_path)) {
+            fprintf(stderr, "error: cannot open migration database\n");
+            free(migrations);
+            return false;
+        }
     }
     if (!database_execute_sql(&database,
                               sv("CREATE TABLE IF NOT EXISTS schema_migrations "

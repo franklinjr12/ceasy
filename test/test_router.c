@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <string.h>
 static int handler_calls;
+static int guard_calls;
 
 static void posts_show(Context *context) {
     assert(context != NULL);
@@ -22,6 +23,12 @@ static void nested_show(Context *context) {
     handler_calls++;
 }
 
+static bool deny_guard(Context *context) {
+    assert(context != NULL);
+    guard_calls++;
+    return false;
+}
+
 int main(void) {
     Router router;
     Context context;
@@ -34,6 +41,8 @@ int main(void) {
     assert(route_patch(&router, "/posts/:id", posts_new));
     assert(route_delete(&router, "/posts/:id", posts_new));
     assert(route_get(&router, "/users/:user_id/posts/:id", nested_show));
+    assert(
+        router_route_get_guarded(&router, "/private", deny_guard, posts_new));
 
     assert(router_dispatch(&router, "GET", "/posts/42", &context) ==
            ROUTER_DISPATCHED);
@@ -52,6 +61,10 @@ int main(void) {
            ROUTER_DISPATCHED);
     assert(router_dispatch(&router, "DELETE", "/posts/42", &context) ==
            ROUTER_DISPATCHED);
+    assert(router_dispatch(&router, "GET", "/private", &context) ==
+           ROUTER_DISPATCHED);
+    assert(guard_calls == 1);
+    assert(handler_calls == 5);
 
     router_reset(router_default());
     assert(route_get("/health", posts_new));

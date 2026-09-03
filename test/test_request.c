@@ -10,6 +10,7 @@ int main(void) {
     assert(result == REQUEST_PARSE_OK);
     assert(request.method == HTTP_METHOD_GET);
     assert(stringv_equal(request.path, sv("/posts")));
+    assert(stringv_equal(request.query_string, sv("x=1")));
     assert(
         stringv_equal(request_header(&request, sv("host")), sv("localhost")));
     result = request_parse(
