@@ -1,4 +1,13 @@
-#include "posts_controller.h"
+#include "controllers/account_controller.h"
+#include "controllers/authors_controller.h"
+#include "controllers/comments_controller.h"
+#include "controllers/concerns/blog_controller.h"
+#include "controllers/dashboard_controller.h"
+#include "controllers/home_controller.h"
+#include "controllers/posts_controller.h"
+#include "controllers/sessions_controller.h"
+#include "controllers/system_controller.h"
+#include "controllers/users_controller.h"
 
 void routes(Router *router) {
     route_get(router, "/", home_index);
